@@ -86,7 +86,7 @@ def generate_watchlist(holdings):
     for cusip in unique_cusips:
         for filing in holdings:
             if cusip in filing['cusip'].values:
-                if filing[filing['cusip'] == cusip]['pctOfPort'].any() >= position_size_cutoff:
+                if filing[filing['cusip'] == cusip]['pctOfPort'].sum() >= position_size_cutoff:
                     counts.at[cusip,'count'] += 1
 
     cusip_names = pd.read_csv('13flist2021q3.csv',names=['cusip','star','issuerName','issuerDescription','status'])
@@ -110,7 +110,7 @@ def generate_watchlist(holdings):
 
             number_of_twos = len(counts[counts['count'] == 2]['issuerName'].tolist())
 
-            # first, find out how many names are in the 3 column
+            # next, find out how many names are in the 3 column
 
             number_of_threes = len(counts[counts['count'] == 3]['issuerName'].tolist())
 
