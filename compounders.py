@@ -7,6 +7,9 @@ import csv
 import itertools
 import os
 
+# cutoff for position size
+position_size_cutoff = 0.01
+
 # dictionary with fund names and CIKs
 
 compounder_funds = {
@@ -29,6 +32,7 @@ compounder_funds = {
     "TCI": 1647251,
     "Tiger Global": 1167483,
     "Triple Frond": 1454502,
+    "Valley Forge": 1697868,
     "WCM": 1061186
 }
 
@@ -60,6 +64,8 @@ def create_filing_df(funds):
         table = soup.find("informationTable")
         df = pd.read_xml(table.prettify())
 
+        df['pctOfPort'] = df['value'] / df['value'].sum()
+
         holdings.append(df)
 
     return holdings
@@ -80,7 +86,8 @@ def generate_watchlist(holdings):
     for cusip in unique_cusips:
         for filing in holdings:
             if cusip in filing['cusip'].values:
-                counts.at[cusip,'count'] += 1
+                if filing[filing['cusip'] == cusip]['pctOfPort'].any() >= position_size_cutoff:
+                    counts.at[cusip,'count'] += 1
 
     cusip_names = pd.read_csv('13flist2021q3.csv',names=['cusip','star','issuerName','issuerDescription','status'])
     cusip_names.set_index('cusip',inplace=True)
@@ -89,7 +96,8 @@ def generate_watchlist(holdings):
     counts.sort_values('count',ascending=False,inplace=True)
     counts.drop(['star','status'], axis=1, inplace=True)
 
-    unique_counts = list(set(counts['count']))[1:]
+    unique_counts = list(set(counts['count']))
+    unique_counts = [i for i in unique_counts if i >= 2]
 
     output = []
 
@@ -129,19 +137,7 @@ def generate_watchlist(holdings):
         writer.writerows(pivoted)
 
 
-def cleanup():
-
-    dir_path = './sec-edgar-filings/'
-
-    try:
-        os.rmdir(dir_path)
-
-    except OSError as e:
-        print("Error cleaning up files.")
-
-
 download_filings(compounder_funds)
 holdings = create_filing_df(compounder_funds)
 generate_watchlist(holdings)
-cleanup()
 print("Watchlist downloaded successfully!")
